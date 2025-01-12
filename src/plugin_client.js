@@ -2,7 +2,8 @@
 // This file handles plugin-side WebSocket logic.
 const WebSocket = require('ws');
 const PluginCommand = require('./plugin_command');
-const logger = require('./logger');
+const defaultLogger = require('./logger');
+const logger = defaultLogger.child({ scope: 'PluginClient' });
 const minimist = require('minimist');
 
 class PluginClient {
