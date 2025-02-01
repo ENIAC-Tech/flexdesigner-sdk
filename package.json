@@ -11,8 +11,8 @@
   "dependencies": {
     "minimist": "^1.2.8",
     "uuid": "^11.0.5",
-    "websocket": "^1.0.35",
     "winston": "^3.17.0",
-    "winston-daily-rotate-file": "^5.0.0"
+    "winston-daily-rotate-file": "^5.0.0",
+    "ws": "^8.18.0"
   }
 }
