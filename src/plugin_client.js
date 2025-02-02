@@ -179,7 +179,7 @@ class Plugin {
       delete this.pendingCalls[cmd.uuid];
 
       if (cmd.status === 'success') resolve(cmd.payload);
-      else reject(new Error(cmd.error || 'Unknown error'));
+      else reject(new Error(`Request failed: ${cmd.error || 'Unknown error'}, Command: ${cmd.toString()}`));
       return;
     }
 

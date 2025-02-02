@@ -3,12 +3,13 @@ const { v4: uuidv4 } = require('uuid');
 // This class represents a plugin command structure.
 
 class PluginCommand {
-  constructor(type, payload, uuid, status) {
+  constructor(type, payload, uuid, status, error=null) {
     this.type = type;
     this.payload = payload;
     this.timestamp = Date.now();
     this.uuid = uuid || uuidv4();
     this.status = status || 'pending';
+    this.error = error;
   }
 
   toString() {
@@ -23,14 +24,15 @@ class PluginCommand {
       payload: this.payload,
       timestamp: this.timestamp,
       uuid: this.uuid,
-      status: this.status
+      status: this.status,
+      error: this.error
     };
   }
 
   static fromJSON(json) {
     // Builds a command object from JSON
     const obj = typeof json === 'string' ? JSON.parse(json) : json;
-    return new PluginCommand(obj.type, obj.payload, obj.uuid, obj.status);
+    return new PluginCommand(obj.type, obj.payload, obj.uuid, obj.status, obj.error);
   }
 }
 
