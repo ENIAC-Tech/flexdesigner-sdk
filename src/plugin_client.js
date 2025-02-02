@@ -159,12 +159,12 @@ class Plugin {
    * @param {string} msg - The received message in string format.
    * @returns {void}
    */
-  _handleMessage(msg) {
+  async _handleMessage(msg) {
     let cmd;
     msg = msg.toString('utf8');
     try {
       cmd = PluginCommand.fromJSON(msg);
-      logger.debug(`Received message: ${cmd.toString()}`);
+      // logger.debug(`Received message: ${cmd.toString()}`);
     } catch (e) {
       logger.error(`Invalid message format: ${msg}`);
       return;
@@ -186,7 +186,7 @@ class Plugin {
     // If it's a broadcast or direct send
     const handler = this.handlers[cmd.type];
     if (handler) {
-      const result = handler(cmd.payload);
+      const result = await handler(cmd.payload);
       const response = new PluginCommand('response', result, cmd.uuid, 'success');
       this.ws.send(JSON.stringify(response.toJSON()));
     }
