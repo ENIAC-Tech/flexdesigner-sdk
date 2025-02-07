@@ -224,6 +224,7 @@ class Plugin {
    * This method sends a draw command to the server, allowing the image data in 
    * base64 format to be drawn on the specified key.
    *
+   * @param {string} serialNumber - The serial number of the device.
    * @param {Object} key - The key object received from the event `device.newPage` or `device.userData`.
    * @param {string} type - The type of drawing operation. Possible values:
    * ```
@@ -232,8 +233,9 @@ class Plugin {
    * @param {string} [base64=null] - The base64 image data. Only used if `type` is "base64".
    * @returns {Promise<any>} A promise that resolves with the server response.
    */
-  draw(key, type = 'draw', base64 = null) {
-    return this._call('draw', {
+  draw(serialNumber, key, type = 'draw', base64 = null) {
+    return this._call(serialNumber, 'draw', {
+      serialNumber,
       type,
       key,
       base64
@@ -247,6 +249,7 @@ class Plugin {
    * This method sends a command to update the state or value of a specified key 
    * based on the key type. It supports "multiState" and "slider" key types.
    *
+   * @param {string} serialNumber - The serial number of the device.
    * @param {Object} key - The key object received from the event `device.newPage` or `device.userData`.
    * @param {Object} data - The data to set on the key. The format of `data` depends on the key type:
    *   - For "multiState" keys: 
@@ -265,7 +268,7 @@ class Plugin {
    * @throws {Error} If the provided data is invalid for the given key type.
    * @returns {Promise<any>} A promise that resolves with the server response.
    */
-  set(key, data) {
+  set(serialNumber, key, data) {
     // validate data
     if (key.cfg?.keyType === 'multiState') {
       // state key
@@ -283,7 +286,8 @@ class Plugin {
       throw new Error('Invalid key type');
     }
 
-    return this._call('set', {
+    return this._call(serialNumber, 'set', {
+      serialNumber,
       key,
       data
     });
