@@ -22,6 +22,9 @@ class Plugin {
     this.ws = null;
     this.handlers = {};    // For on(type, handler)
     this.pendingCalls = {}; 
+    this.uuid = '',
+    this.directory = '',
+    this.port = 0;
   }
 
   /**
@@ -43,6 +46,10 @@ class Plugin {
     }
 
     logger.info(`Starting plugin client with port ${port}, uid ${uid} and dir ${dir}`);
+
+    this.port = port;
+    this.uuid = uid;
+    this.directory = dir;
 
     this.serverUrl = `ws://localhost:${port}`;
     this.ws = new WebSocket(this.serverUrl);
@@ -499,6 +506,42 @@ class Plugin {
       {
         api: "getDeviceStatus",
         args: null,
+      },
+      0
+    );
+  }
+
+  /**
+   * @brief Get the plugin configuration.
+   * 
+   * @returns {Promise<Object>} A promise that resolves to the plugin configuration object.
+   * @throws {Error} Throws an error if the call fails
+   */
+  getConfig() {
+    return this._call(
+      "api-call",
+      {
+        api: "getPluginConfig",
+        pluginID: this.uuid,
+      },
+      0
+    );
+  }
+
+  /**
+   * @brief Set the plugin configuration.
+   * 
+   * @param {Object} config The plugin configuration object.
+   * @returns {Promise<Object>} A promise that resolves to the result { status: 'success' | 'error }.
+   * @throws {Error} Throws an error if the call fails
+   */
+  setConfig(config) {
+    return this._call(
+      "api-call",
+      {
+        api: "setPluginConfig",
+        pluginID: this.uuid,
+        config
       },
       0
     );
