@@ -241,7 +241,7 @@ class Plugin {
    * @returns {Promise<any>} A promise that resolves with the server response.
    */
   draw(serialNumber, key, type = 'draw', base64 = null) {
-    return this._call(serialNumber, 'draw', {
+    return this._call('draw', {
       serialNumber,
       type,
       key,
@@ -293,7 +293,7 @@ class Plugin {
       throw new Error('Invalid key type');
     }
 
-    return this._call(serialNumber, 'set', {
+    return this._call('set', {
       serialNumber,
       key,
       data
