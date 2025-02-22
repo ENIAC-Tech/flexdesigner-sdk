@@ -1,11 +1,11 @@
 {
   "name": "@eniac/flexdesigner",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "FlexDesigner SDK module",
   "main": "src/index.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ENIAC-Tech/flexdesigner-sdk"
+    "url": "git+https://github.com/ENIAC-Tech/flexdesigner-sdk.git"
   },
   "scripts": {
     "test": "node test/test.js"
