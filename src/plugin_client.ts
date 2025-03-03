@@ -1,12 +1,12 @@
 // plugin_client.js
 // This file handles plugin-side WebSocket logic.
 
-const WebSocket = require('ws');
-const PluginCommand = require('./plugin_command');
-const defaultLogger = require('./logger');
+import WebSocket from 'ws';
+import PluginCommand from './plugin_command';
+import defaultLogger from './logger';
 const logger = defaultLogger.child({ scope: 'plugin' });
 const uiLogger = defaultLogger.child({ scope: 'UI' });
-const minimist = require('minimist');
+import minimist from 'minimist';
 
 /**
  * @brief Plugin client class for managing WebSocket connections and interactions with the server.
@@ -17,14 +17,26 @@ const minimist = require('minimist');
  * message types.
  */
 class Plugin {
+
+  serverUrl: string;
+  ws: WebSocket | null;
+  handlers: Array<Function>;
+  pendingCalls: any;
+  uuid: string;
+  directory: string;
+  port: number
+
+  /**
+   * @brief Constructor for the Plugin class.
+   */
   constructor() {
     this.serverUrl = ''; // Will be set in the start method
     this.ws = null;
-    this.handlers = {};    // For on(type, handler)
-    this.pendingCalls = {}; 
+    this.handlers = [];    // For on(type, handler)
+    this.pendingCalls = {};
     this.uuid = '',
-    this.directory = '',
-    this.port = 0;
+      this.directory = '',
+      this.port = 0;
   }
 
   /**
@@ -63,18 +75,28 @@ class Plugin {
       this.ws.send(JSON.stringify(initCmd.toJSON()));
     });
 
-    this.ws.on('message', (msg) => {
-      this._handleMessage(msg);
+    this.ws.on('message', (msg: WebSocket.Data) => {
+      this._handleMessage(msg).catch((err) => {
+        logger.error(`Error handling message: ${err.message}`);
+      });
     });
 
     this.ws.on('close', () => {
       logger.warn('Connection closed');
-      process.exit(0);
+      // Retry connection
+      logger.info('Retrying connection in 5 seconds...');
+      setTimeout(() => {
+        this.start();
+      }, 5000);
     });
 
     this.ws.on('error', (err) => {
       logger.error(`WebSocket error: ${err.message}`);
-      process.exit(0);
+      // Retry connection
+      logger.info('Retrying connection in 5 seconds...');
+      setTimeout(() => {
+        this.start();
+      }, 5000);
     });
 
     // Register default handlers
@@ -137,7 +159,7 @@ class Plugin {
    * @param {number} timeout - The timeout in milliseconds before rejecting the request. Default is 5000 ms.
    * @returns {Promise<any>} A promise that resolves with the response payload or rejects with an error.
    */
-  _call(command, payload, timeout = 5000) {
+  _call(command: string, payload: Object, timeout = 5000): Promise<any> {
     return new Promise((resolve, reject) => {
       const cmd = new PluginCommand(command, payload);
       this.pendingCalls[cmd.uuid] = {
@@ -166,9 +188,9 @@ class Plugin {
    * @param {string} msg - The received message in string format.
    * @returns {void}
    */
-  async _handleMessage(msg) {
-    let cmd;
-    msg = msg.toString('utf8');
+  async _handleMessage(msg: string): Promise<void> {
+    let cmd: PluginCommand;
+    msg = msg.toString();
     try {
       cmd = PluginCommand.fromJSON(msg);
       // logger.debug(`Received message: ${cmd.toString()}`);
@@ -210,7 +232,7 @@ class Plugin {
    * @param {Function} handler - The handler function that processes the message payload.
    * @returns {void}
    */
-  on(type, handler) {
+  on(type: string, handler: Function): void {
     this.handlers[type] = handler;
   }
 
@@ -240,7 +262,7 @@ class Plugin {
    * @param {string} [base64=null] - The base64 image data. Only used if `type` is "base64".
    * @returns {Promise<any>} A promise that resolves with the server response.
    */
-  draw(serialNumber, key, type = 'draw', base64 = null) {
+  draw(serialNumber: string, key: Object, type: string = 'draw', base64: string = null): Promise<any> {
     return this._call('draw', {
       serialNumber,
       type,
@@ -553,9 +575,7 @@ class Plugin {
  *
  * This is the main entry point for interacting with the Plugin class. All methods
  * on the Plugin class are accessible through this instance.
- *
- * @type {Plugin}
  */
-const plugin = new Plugin();
+const plugin: Plugin = new Plugin();
 
-module.exports = plugin;
+export default plugin;

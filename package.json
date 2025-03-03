@@ -2,13 +2,15 @@
   "name": "@eniac/flexdesigner",
   "version": "1.0.1",
   "description": "FlexDesigner SDK module",
-  "main": "src/index.js",
+  "main": "dist/index.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ENIAC-Tech/flexdesigner-sdk.git"
   },
   "scripts": {
-    "test": "node test/test.js"
+    "test": "node test/test.js",
+    "build": "tsc",
+    "dev": "tsc -w"
   },
   "author": "eniac",
   "license": "MIT",
@@ -18,5 +20,10 @@
     "winston": "^3.17.0",
     "winston-daily-rotate-file": "^5.0.0",
     "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/minimist": "^1.2.5",
+    "@types/node": "^22.13.8",
+    "typescript": "^5.7.3"
   }
 }

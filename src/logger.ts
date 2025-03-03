@@ -1,9 +1,9 @@
-const winston = require("winston");
-const DailyRotateFile = require("winston-daily-rotate-file");
-const path = require("path");
-const fs = require("fs");
-const { fileURLToPath } = require('url');
-let cachedLogger = null;
+import winston from "winston";
+import DailyRotateFile from "winston-daily-rotate-file";
+import fs from "fs";
+import { fileURLToPath } from "url";
+
+let cachedLogger: winston.Logger | null = null;
 
 /**
  * Log directory
@@ -26,7 +26,7 @@ winston.addColors({
 /**
  * Safely convert an object to a JSON string to avoid circular references
  */
-function safeStringify(obj, space = 2) {
+function safeStringify(obj: any[], space = 2) {
   const seen = new WeakSet();
   return JSON.stringify(
     obj,
@@ -46,7 +46,7 @@ function safeStringify(obj, space = 2) {
 /**
  * Check if a value is a TypedArray
  */
-function isTypedArray(value) {
+function isTypedArray(value: any): boolean {
   return (
     value instanceof Int8Array ||
     value instanceof Uint8Array ||
@@ -65,7 +65,7 @@ function isTypedArray(value) {
 /**
  * Convert a single value into a string
  */
-function formatValue(value) {
+function formatValue(value: any): string {
   // 1. null / undefined
   if (value === null) return "null";
   if (value === undefined) return "undefined";
@@ -78,7 +78,7 @@ function formatValue(value) {
   // 3. TypedArray
   if (isTypedArray(value)) {
     const hexStr = Array.from(value)
-      .map((b) => `0x${b.toString(16).padStart(2, "0")}`)
+      .map((b: any) => `0x${b.toString(16).padStart(2, "0")}`)
       .join(", ");
     return `${value.constructor.name} [ ${hexStr} ]`;
   }
@@ -156,7 +156,7 @@ function formatValue(value) {
 /**
  * Format multiple arguments into one message string
  */
-function formatMessage(args) {
+function formatMessage(args: any[]): string {
   // args is an array of everything passed to logger.info(...), etc.
   return args.map(formatValue).join(" ");
 }
@@ -164,7 +164,7 @@ function formatMessage(args) {
 /**
  * Create Winston Logger
  */
-function createMainLogger() {
+function createMainLogger(): winston.Logger {
   const mainLogger = winston.createLogger({
     level: "debug",
     format: winston.format.combine(
@@ -217,4 +217,4 @@ if (!cachedLogger) {
   cachedLogger = createMainLogger();
 }
 
-module.exports = cachedLogger;
+export default cachedLogger;
