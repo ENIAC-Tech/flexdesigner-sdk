@@ -1,14 +1,24 @@
-const { v4: uuidv4 } = require('uuid');
+import { v4 as uuidv4 } from 'uuid';
 // plugin_command.js
 // This class represents a plugin command structure.
 
 class PluginCommand {
-  constructor(type, payload, uuid, status, error=null) {
+  type: string;
+  payload: object;
+  timestamp: number;
+  uuid: string;
+  status: string;
+  error: string
+
+  /**
+   * Constructor
+   */
+  constructor(type: string, payload: object, uuid: string = uuidv4(), status: string = 'pending', error = null) {
     this.type = type;
     this.payload = payload;
     this.timestamp = Date.now();
-    this.uuid = uuid || uuidv4();
-    this.status = status || 'pending';
+    this.uuid = uuid;
+    this.status = status;
     this.error = error;
   }
 
@@ -36,4 +46,4 @@ class PluginCommand {
   }
 }
 
-module.exports = PluginCommand;
+export default PluginCommand;
