@@ -1,6 +1,6 @@
 {
   "name": "@eniac/flexdesigner",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "FlexDesigner SDK module",
   "main": "dist/index.js",
   "repository": {
