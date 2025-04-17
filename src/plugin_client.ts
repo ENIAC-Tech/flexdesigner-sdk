@@ -272,6 +272,46 @@ class Plugin {
   }
 
   /**
+   * @brief Send chart data for performance monitoring.
+   *
+   * Detailed description:
+   * This method sends an array of performance metrics to be displayed in custom charts.
+   * Each chart data object contains information about a specific metric including its 
+   * current value, unit, and display formatting.
+   *
+   * @param {Array<Object>} chartDataArray - An array of chart data objects with the following structure:
+   *   ```
+   *   {
+   *     label: string,       // Display name of the metric
+   *     value: number|string, // Current value of the metric
+   *     unit: string,        // Unit of measurement (e.g., FPS, %, GB, ℃)
+   *     baseUnit: string,    // Base unit for conversion calculations
+   *     baseVal: number|string, // Raw value before formatting
+   *     maxLen: number,      // Maximum length for display formatting (1-4)
+   *     category: string,    // Category grouping (e.g., CPU, GPU, MEMORY, OTHER)
+   *     key: string,         // Unique identifier for the metric
+   *     icon?: string        // MDI icon name without 'mdi-' prefix (e.g., 'chevron-triple-right'). Search in https://pictogrammers.com/library/mdi/
+   *   }
+   *   ```
+   * @returns {Promise<any>} A promise that resolves with the server response.
+   */
+  sendChartData(chartDataArray: Array<{
+    label: string,
+    value: number | string,
+    unit: string,
+    baseUnit: string,
+    baseVal: number | string,
+    maxLen: number,
+    category: string,
+    key: string,
+    icon?: string
+  }>): Promise<any> {
+    return this._call('custom-chart-data', {
+      data: chartDataArray
+    });
+  }
+
+  /**
    * @brief Set data for a specific key.
    *
    * Detailed description:
