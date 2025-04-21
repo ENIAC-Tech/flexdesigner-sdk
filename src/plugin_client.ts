@@ -24,7 +24,7 @@ class Plugin {
   pendingCalls: any;
   uuid: string;
   directory: string;
-  port: number
+  port: number;
 
   /**
    * @brief Constructor for the Plugin class.
@@ -53,7 +53,7 @@ class Plugin {
   start() {
     const { port, uid, dir } = this._parseCommandLineArgs();
     if (!port || !uid || !dir) {
-      console.error('Usage: node plugin_client.js --port=<port> --uid=<uid> --dir=<dir>');
+      console.error(`Usage: node plugin_client.js --port=<port> --uid=<uid> --dir=<dir>, Args: ${JSON.stringify(process.argv.slice(2))}`);
       process.exit(1);
     }
 
@@ -68,8 +68,8 @@ class Plugin {
 
     this.ws.on('open', () => {
       logger.info(`Connected to server at ${this.serverUrl}`);
-      const initCmd = new PluginCommand('startup', {
-        pluginID: uid,
+      const initCmd = new PluginCommand(this.uuid, 'startup', {
+        pluginID: this.uuid,
       });
       logger.debug(`Sending init command: ${initCmd.toString()}`);
       this.ws.send(JSON.stringify(initCmd.toJSON()));
@@ -161,7 +161,7 @@ class Plugin {
    */
   _call(command: string, payload: Object, timeout = 5000): Promise<any> {
     return new Promise((resolve, reject) => {
-      const cmd = new PluginCommand(command, payload);
+      const cmd = new PluginCommand(this.uuid, command, payload);
       this.pendingCalls[cmd.uuid] = {
         resolve,
         reject,
@@ -216,7 +216,7 @@ class Plugin {
     const handler = this.handlers[cmd.type];
     if (handler) {
       const result = await handler(cmd.payload);
-      const response = new PluginCommand('response', result, cmd.uuid, 'success');
+      const response = new PluginCommand(this.uuid, 'response', result, cmd.uuid, 'success');
       this.ws.send(JSON.stringify(response.toJSON()));
     }
   }
@@ -309,6 +309,24 @@ class Plugin {
     return this._call('custom-chart-data', {
       data: chartDataArray
     });
+  }
+
+  /**
+   * @brief Update shortcuts.
+   *
+   * Detailed description:
+   * This method sends a command to update the shortcuts.
+   * 
+   * Shortcut values can be referenced from https://www.electronjs.org/docs/latest/api/accelerator
+   *
+   * @param {Array<Object>} shortcuts - The shortcuts to update.
+   * @returns {Promise<any>} A promise that resolves with the server response.
+   */
+  updateShortcuts(shortcuts: Array<{
+    shortcut: string,
+    action: string, // 'register' | 'unregister'
+  }>): Promise<any> {
+    return this._call('update-shortcuts', { shortcuts });
   }
 
   /**
