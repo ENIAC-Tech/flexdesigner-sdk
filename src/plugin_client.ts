@@ -592,6 +592,37 @@ class Plugin {
   }
 
   /**
+   * @brief Set device configuration
+   * 
+   * @param {string} serialNumber - The serial number of the device
+   * @param {Object} config Device configuration object that may contain:
+   * - sleepTime: number (0 or 30-5999) - Sleep timeout in seconds
+   * - brightness: number (0-100) - Screen brightness
+   * - screenFlip: boolean - Whether to flip the screen
+   * - vibrate: 'off' | 'partial' | 'full' - Vibration mode
+   * - autoSleep: boolean - Whether to sleep together with computer sleep state
+   * - deviceName: string (max 32 chars) - Device name
+   * - cdcMode: boolean - CDC mode switch
+   * - color: 'black' | 'silver' - Device color
+   * @returns {Promise<any>} Promise that resolves with the result
+   */
+  setDeviceConfig(serialNumber: string, config: {
+    sleepTime?: number,
+    brightness?: number,
+    screenFlip?: boolean,
+    vibrate?: 'off' | 'partial' | 'full',
+    autoSleep?: boolean,
+    deviceName?: string,
+    cdcMode?: boolean,
+    color?: 'space black' | 'silver'
+  }): Promise<any> {
+    return this._call('device-config', {
+      serialNumber,
+      config
+    });
+  }
+
+  /**
    * @brief Get the plugin configuration.
    * 
    * @returns {Promise<Object>} A promise that resolves to the plugin configuration object.
