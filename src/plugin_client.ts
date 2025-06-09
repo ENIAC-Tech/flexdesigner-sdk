@@ -1,9 +1,8 @@
-// plugin_client.js
-// This file handles plugin-side WebSocket logic.
+// This file provides the API for plugins.
 
-import WebSocket from 'ws';
-import PluginCommand from './plugin_command.js';
 import defaultLogger from './logger.js';
+import PluginTransport from './transport.js';
+
 const logger = defaultLogger.child({ scope: 'plugin' });
 const uiLogger = defaultLogger.child({ scope: 'UI' });
 import minimist from 'minimist';
@@ -17,16 +16,16 @@ import minimist from 'minimist';
  * parent plugin instance using the "dynamic-plugin" command.
  */
 class DynamicKey {
-  
-  private plugin: Plugin;
+
+  private transport: PluginTransport;
 
   /**
    * @brief Constructor for the DynamicKey class.
    *
-   * @param {Plugin} plugin - The parent plugin instance.
+   * @param {PluginTransport} transport - The plugin transport.
    */
-  constructor(plugin: Plugin) {
-    this.plugin = plugin;
+  constructor(transport: PluginTransport) {
+    this.transport = transport;
   }
 
   /**
@@ -41,7 +40,7 @@ class DynamicKey {
    * @returns {Promise<any>} A promise that resolves with the server response.
    */
   clear(serialNumber: string, key: Object): Promise<any> {
-    return this.plugin._call("dynamic-plugin", {
+    return this.transport.call("dynamic-plugin", {
       cmd: 'clear',
       serialNumber,
       key
@@ -68,7 +67,7 @@ class DynamicKey {
    * @returns {Promise<any>} A promise that resolves with the server response.
    */
   add(serialNumber: string, key: Object, addToIndex: number, backgroundType: string, backgroundData: string, width: number, userData: Object): Promise<any> {
-    return this.plugin._call("dynamic-plugin", {
+    return this.transport.call("dynamic-plugin", {
       cmd: 'add',
       serialNumber,
       backgroundType: backgroundType,
@@ -92,7 +91,7 @@ class DynamicKey {
    * @returns {Promise<any>} A promise that resolves with the server response.
    */
   remove(serialNumber: string, key: Object, index: number): Promise<any> {
-    return this.plugin._call("dynamic-plugin", {
+    return this.transport.call("dynamic-plugin", {
       cmd: 'remove',
       serialNumber,
       key,
@@ -113,7 +112,7 @@ class DynamicKey {
    * @returns {Promise<any>} A promise that resolves with the server response.
    */
   setWidth(serialNumber: string, key: Object, width: number): Promise<any> {
-    return this.plugin._call("dynamic-plugin", {
+    return this.transport.call("dynamic-plugin", {
       cmd: 'set',
       serialNumber,
       key,
@@ -137,7 +136,7 @@ class DynamicKey {
    * @returns {Promise<any>} A promise that resolves with the server response.
    */
   move(serialNumber: string, key: Object, srcIndex: number, dstIndex: number): Promise<any> {
-    return this.plugin._call("dynamic-plugin", {
+    return this.transport.call("dynamic-plugin", {
       cmd: 'move',
       serialNumber,
       key,
@@ -165,7 +164,7 @@ class DynamicKey {
    * @returns {Promise<any>} A promise that resolves with the server response.
    */
   draw(serialNumber: string, key: Object, index: number, backgroundType: string, backgroundData: string, width: number): Promise<any> {
-    return this.plugin._call("dynamic-plugin", {
+    return this.transport.call("dynamic-plugin", {
       cmd: 'draw',
       serialNumber,
       backgroundType: backgroundType,
@@ -189,7 +188,7 @@ class DynamicKey {
    * @returns {Promise<any>} A promise that resolves with the server response.
    */
   update(serialNumber: string, key: Object, index: number, userData: Object): Promise<any> {
-    return this.plugin._call("dynamic-plugin", {
+    return this.transport.call("dynamic-plugin", {
       cmd: 'update',
       serialNumber,
       key,
@@ -209,7 +208,7 @@ class DynamicKey {
    * @returns {Promise<any>} A promise that resolves with the server response.
    */
   refresh(serialNumber: string, key: Object): Promise<any> {
-    return this.plugin._call("dynamic-plugin", {
+    return this.transport.call("dynamic-plugin", {
       cmd: 'refresh',
       serialNumber,
       key
@@ -227,27 +226,28 @@ class DynamicKey {
  */
 class Plugin {
 
-  serverUrl: string;
-  ws: WebSocket | null;
-  handlers: Array<Function>;
-  pendingCalls: any;
   uuid: string;
   directory: string;
   port: number;
+  transport: PluginTransport;
   dynamickey: DynamicKey;
 
   /**
    * @brief Constructor for the Plugin class.
    */
   constructor() {
-    this.serverUrl = ''; // Will be set in the start method
-    this.ws = null;
-    this.handlers = [];    // For on(type, handler)
-    this.pendingCalls = {};
-    this.uuid = '',
-      this.directory = '',
-      this.port = 0;
-    this.dynamickey = new DynamicKey(this);
+    const argv = minimist(process.argv.slice(2));
+    this.uuid = argv.uid;
+    this.directory = argv.dir;
+    this.port = parseInt(argv.port);
+
+    if (!this.uuid || !this.directory || !this.port) {
+      console.error(`Usage: node plugin_client.js --port=<port> --uid=<uid> --dir=<dir>, Args: ${JSON.stringify(process.argv.slice(2))}`);
+      process.exit(1);
+    }
+
+    this.transport = new PluginTransport(this.uuid, this.port);
+    this.dynamickey = new DynamicKey(this.transport);
   }
 
   /**
@@ -262,53 +262,7 @@ class Plugin {
    * @return {void}
    */
   start() {
-    const { port, uid, dir } = this._parseCommandLineArgs();
-    if (!port || !uid || !dir) {
-      console.error(`Usage: node plugin_client.js --port=<port> --uid=<uid> --dir=<dir>, Args: ${JSON.stringify(process.argv.slice(2))}`);
-      process.exit(1);
-    }
-
-    logger.info(`Starting plugin client with port ${port}, uid ${uid} and dir ${dir}`);
-
-    this.port = port;
-    this.uuid = uid;
-    this.directory = dir;
-
-    this.serverUrl = `ws://localhost:${port}`;
-    this.ws = new WebSocket(this.serverUrl);
-
-    this.ws.on('open', () => {
-      logger.info(`Connected to server at ${this.serverUrl}`);
-      const initCmd = new PluginCommand(this.uuid, 'startup', {
-        pluginID: this.uuid,
-      });
-      logger.debug(`Sending init command: ${initCmd.toString()}`);
-      this.ws.send(JSON.stringify(initCmd.toJSON()));
-    });
-
-    this.ws.on('message', (msg: WebSocket.Data) => {
-      this._handleMessage(msg).catch((err) => {
-        logger.error(`Error handling message: ${err.message}`);
-      });
-    });
-
-    this.ws.on('close', () => {
-      logger.warn('Connection closed');
-      // Retry connection
-      logger.info('Retrying connection in 5 seconds...');
-      setTimeout(() => {
-        this.start();
-      }, 5000);
-    });
-
-    this.ws.on('error', (err) => {
-      logger.error(`WebSocket error: ${err.message}`);
-      // Retry connection
-      logger.info('Retrying connection in 5 seconds...');
-      setTimeout(() => {
-        this.start();
-      }, 5000);
-    });
+    logger.info(`Starting plugin client with dir ${this.directory}`);
 
     // Register default handlers
     this.on('ui.log', (payload) => {
@@ -324,112 +278,8 @@ class Plugin {
         logger.warn(`Invalid log level: ${payload.level}, message: ${payload.msg}`);
       }
     })
-  }
 
-  /**
-   * @brief Parses command-line arguments to extract port, uid, and dir.
-   *
-   * Detailed description:
-   * This method uses the `minimist` library to parse command-line arguments, 
-   * returning an object with `port`, `uid`, and `dir` properties.
-   *
-   * @returns {Object} An object containing the parsed arguments:
-   * ```
-   * {
-   *   port: <number|string>, 
-   *   uid: <string>, 
-   *   dir: <string>
-   * }
-   * ```
-   */
-  _parseCommandLineArgs() {
-    const argv = minimist(process.argv.slice(2), {
-      alias: {
-        p: 'port',
-        u: 'uid',
-        d: 'dir'
-      }
-    });
-
-    return {
-      port: argv.port,
-      uid: argv.uid,
-      dir: argv.dir
-    };
-  }
-
-  /**
-   * @brief Sends a request to the server with a specific command and payload.
-   *
-   * Detailed description:
-   * The method creates a `PluginCommand` and sends it via WebSocket. 
-   * It also sets a timeout to reject the request if no response is received.
-   *
-   * @param {string} command - The command to send to the server.
-   * @param {Object} payload - The payload to send along with the command.
-   * @param {number} timeout - The timeout in milliseconds before rejecting the request. Default is 5000 ms.
-   * @returns {Promise<any>} A promise that resolves with the response payload or rejects with an error.
-   */
-  _call(command: string, payload: Object, timeout = 5000): Promise<any> {
-    return new Promise((resolve, reject) => {
-      const cmd = new PluginCommand(this.uuid, command, payload);
-      this.pendingCalls[cmd.uuid] = {
-        resolve,
-        reject,
-        timer: null
-      };
-      if (timeout > 0) {
-        this.pendingCalls[cmd.uuid].timer = setTimeout(() => {
-          delete this.pendingCalls[cmd.uuid];
-          reject(new Error(`Request timed out, command: ${command}, payload: ${JSON.stringify(payload)}`));
-        }, timeout)
-      }
-      this.ws.send(JSON.stringify(cmd.toJSON()));
-    });
-  }
-
-  /**
-   * @brief Handles incoming WebSocket messages.
-   *
-   * Detailed description:
-   * The method processes messages from the server, checking if they are 
-   * responses to previous requests, or if they are broadcasts that need to be handled 
-   * by registered message handlers.
-   *
-   * @param {string} msg - The received message in string format.
-   * @returns {void}
-   */
-  async _handleMessage(msg: string): Promise<void> {
-    let cmd: PluginCommand;
-    msg = msg.toString();
-    try {
-      cmd = PluginCommand.fromJSON(msg);
-      // logger.debug(`Received message: ${cmd.toString()}`);
-    } catch (e) {
-      logger.error(`Invalid message format: ${msg}`);
-      return;
-    }
-
-    // If it's a response to a call()
-    if (this.pendingCalls[cmd.uuid]) {
-      const { resolve, reject, timer } = this.pendingCalls[cmd.uuid];
-      if (timer) {
-        clearTimeout(timer);
-      }
-      delete this.pendingCalls[cmd.uuid];
-
-      if (cmd.status === 'success') resolve(cmd.payload);
-      else reject(new Error(`Request failed: ${cmd.error || 'Unknown error'}, Command: ${cmd.toString()}`));
-      return;
-    }
-
-    // If it's a broadcast or direct send
-    const handler = this.handlers[cmd.type];
-    if (handler) {
-      const result = await handler(cmd.payload);
-      const response = new PluginCommand(this.uuid, 'response', result, cmd.uuid, 'success');
-      this.ws.send(JSON.stringify(response.toJSON()));
-    }
+    this.transport.start();
   }
 
   /**
@@ -444,7 +294,7 @@ class Plugin {
    * @returns {void}
    */
   on(type: string, handler: Function): void {
-    this.handlers[type] = handler;
+    this.transport.on(type, handler);
   }
 
   /**
@@ -454,7 +304,7 @@ class Plugin {
    * @returns {void}
    */
   off(type) {
-    delete this.handlers[type];
+    this.transport.off(type);
   }
 
   /**
@@ -474,7 +324,7 @@ class Plugin {
    * @returns {Promise<any>} A promise that resolves with the server response.
    */
   draw(serialNumber: string, key: Object, type: string = 'draw', base64: string = null): Promise<any> {
-    return this._call('draw', {
+    return this.transport.call('draw', {
       serialNumber,
       type,
       key,
@@ -517,7 +367,7 @@ class Plugin {
     key: string,
     icon?: string
   }>): Promise<any> {
-    return this._call('custom-chart-data', {
+    return this.transport.call('custom-chart-data', {
       data: chartDataArray
     });
   }
@@ -658,7 +508,7 @@ class Plugin {
       payload.icon = icon;
     }
 
-    return this._call('show-snackbar-message', payload);
+    return this.transport.call('show-snackbar-message', payload);
   }
 
   /**
@@ -676,7 +526,7 @@ class Plugin {
     shortcut: string,
     action: string, // 'register' | 'unregister'
   }>): Promise<any> {
-    return this._call('update-shortcuts', { shortcuts });
+    return this.transport.call('update-shortcuts', { shortcuts });
   }
 
   /**
@@ -723,7 +573,7 @@ class Plugin {
       throw new Error('Invalid key type');
     }
 
-    return this._call('set', {
+    return this.transport.call('set', {
       serialNumber,
       key,
       data
@@ -745,7 +595,7 @@ class Plugin {
    * @return {Promise<any>} A promise that resolves with the response.
    */
   showSnackbarMessage(color, message, timeout = 3000) {
-    return this._call('ui-operation', {
+    return this.transport.call('ui-operation', {
       type: 'showSnackbarMessage',
       data: {
         color,
@@ -782,7 +632,7 @@ class Plugin {
    * @throws {Error} Throws an error if the call fails
    */
   electronAPI(api, ...args) {
-    return this._call(
+    return this.transport.call(
       "api-call",
       {
         api: "callElectronAPI",
@@ -808,7 +658,7 @@ class Plugin {
    * @throws {Error} Throws an error if the call fails
    */
   getAppInfo() {
-    return this._call(
+    return this.transport.call(
       "api-call",
       {
         api: "getAppInfo",
@@ -829,7 +679,7 @@ class Plugin {
    * @throws {Error} Throws an error if file opening fails
    */
   openFile(path) {
-    return this._call(
+    return this.transport.call(
       "api-call",
       {
         api: "openFile",
@@ -857,7 +707,7 @@ class Plugin {
    * @throws {Error} Throws an error if saving fails
    */
   saveFile(path, data) {
-    return this._call(
+    return this.transport.call(
       "api-call",
       {
         api: "pluginSaveFile",
@@ -899,7 +749,7 @@ class Plugin {
    * @throws {Error} Throws an error if the call fails
    */
   getOpenedWindows() {
-    return this._call(
+    return this.transport.call(
       "api-call",
       {
         api: "getOpenedWindows",
@@ -931,7 +781,7 @@ class Plugin {
    * @throws {Error} Throws an error if the call fails
    */
   getDeviceStatus() {
-    return this._call(
+    return this.transport.call(
       "api-call",
       {
         api: "getDeviceStatus",
@@ -966,7 +816,7 @@ class Plugin {
     cdcMode?: boolean,
     color?: 'space black' | 'silver'
   }): Promise<any> {
-    return this._call('device-config', {
+    return this.transport.call('device-config', {
       serialNumber,
       config
     });
@@ -979,7 +829,7 @@ class Plugin {
    * @throws {Error} Throws an error if the call fails
    */
   getConfig() {
-    return this._call(
+    return this.transport.call(
       "api-call",
       {
         api: "getPluginConfig",
@@ -997,7 +847,7 @@ class Plugin {
    * @throws {Error} Throws an error if the call fails
    */
   setConfig(config) {
-    return this._call(
+    return this.transport.call(
       "api-call",
       {
         api: "setPluginConfig",
