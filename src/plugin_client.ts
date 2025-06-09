@@ -2,6 +2,7 @@
 
 import defaultLogger from './logger.js';
 import PluginTransport from './transport.js';
+import type * as Types from './types.js'
 
 const logger = defaultLogger.child({ scope: 'plugin' });
 const uiLogger = defaultLogger.child({ scope: 'UI' });
@@ -259,19 +260,12 @@ class Plugin {
    * initial "startup" command once connected.
    *
    * @throws {Error} If port, uid, or dir are not provided in the command-line arguments.
-   * @return {void}
    */
-  start() {
+  start(): void {
     logger.info(`Starting plugin client with dir ${this.directory}`);
 
     // Register default handlers
     this.on('ui.log', (payload) => {
-      /*
-      payload: {
-        level: 'debug', 'info' | 'warn' | 'error',
-        msg: 'Some message'
-      }
-      */
       try {
         uiLogger[payload.level](payload.msg);
       } catch (error) {
@@ -281,6 +275,14 @@ class Plugin {
 
     this.transport.start();
   }
+
+  on(type: "plugin.alive", handler: (message: Types.PluginAlivePayload) => void): void;
+  on(type: "plugin.data", handler: (message: Types.PluginDataPayload) => void): void;
+  on(type: "plugin.config.updated", handler: (message: Types.PluginConfigUpdatedPayload) => void): void;
+
+  on(type: "ui.log", handler: (message: Types.UiLogPayload) => void): void;
+  on(type: "system.shortcut", handler: (message: Types.SystemShortcutPayload) => void): void;
+  on(type: "device.status", handler: (message: Array<Types.DeviceStatusPayloadItem>) => void): void;
 
   /**
    * @brief Registers a handler for incoming messages of a specific type.
@@ -293,6 +295,8 @@ class Plugin {
    * @param {Function} handler - The handler function that processes the message payload.
    * @returns {void}
    */
+  on(type: string, handler: (message: any) => any): void;
+
   on(type: string, handler: Function): void {
     this.transport.on(type, handler);
   }
@@ -303,9 +307,18 @@ class Plugin {
    * @param {string} type - The message type to unregister the handler for.
    * @returns {void}
    */
-  off(type) {
+  off(type: string): void {
     this.transport.off(type);
   }
+
+  /**
+   * @brief Update the visual on a key based on `key.style`.
+   * @param {string} serialNumber - The serial number of the device.
+   * @param {Object} key - The key object received from the event `device.newPage` or `device.userData`.
+   * @param type - Use literal "draw" or just don't fill this field.
+   * @returns {Promise<any>} A promise that resolves with the server response.
+   */
+  draw(serialNumber: string, key: Types.KeyData, type?: 'draw'): Promise<any> ;
 
   /**
    * @brief Draw an image on a key.
@@ -316,14 +329,13 @@ class Plugin {
    *
    * @param {string} serialNumber - The serial number of the device.
    * @param {Object} key - The key object received from the event `plugin.data` or `plugin.alive`.
-   * @param {string} type - The type of drawing operation. Possible values:
-   * ```
-   * "draw" | "base64"
-   * ```
-   * @param {string} [base64=null] - The base64 image data. Only used if `type` is "base64".
+   * @param type - Use literal "base64".
+   * @param {string} base64 - The image data as a data URL in PNG. e.g. "data:image/png;base64,iVBORw0KGg..."
    * @returns {Promise<any>} A promise that resolves with the server response.
    */
-  draw(serialNumber: string, key: Object, type: string = 'draw', base64: string = null): Promise<any> {
+  draw(serialNumber: string, key: Types.KeyData, type: 'base64', base64: string): Promise<any> ;
+
+  draw(serialNumber: string, key: Types.KeyData, type = 'draw', base64: string = null): Promise<any> {
     return this.transport.call('draw', {
       serialNumber,
       type,
@@ -340,33 +352,10 @@ class Plugin {
    * Each chart data object contains information about a specific metric including its 
    * current value, unit, and display formatting.
    *
-   * @param {Array<Object>} chartDataArray - An array of chart data objects with the following structure:
-   *   ```
-   *   {
-   *     label: string,       // Display name of the metric
-   *     value: number|string, // Current value of the metric
-   *     unit: string,        // Unit of measurement (e.g., FPS, %, GB, ℃)
-   *     baseUnit: string,    // Base unit for conversion calculations
-   *     baseVal: number|string, // Raw value before formatting
-   *     maxLen: number,      // Maximum length for display formatting (1-4)
-   *     category: string,    // Category grouping (e.g., CPU, GPU, MEMORY, OTHER)
-   *     key: string,         // Unique identifier for the metric
-   *     icon?: string        // MDI icon name without 'mdi-' prefix (e.g., 'chevron-triple-right'). Search in https://pictogrammers.com/library/mdi/
-   *   }
-   *   ```
+   * @param {Array<Types.ChartDataItem>} chartDataArray - An array of chart data objects. See comments in `ChartDataItem` for details.
    * @returns {Promise<any>} A promise that resolves with the server response.
    */
-  sendChartData(chartDataArray: Array<{
-    label: string,
-    value: number | string,
-    unit: string,
-    baseUnit: string,
-    baseVal: number | string,
-    maxLen: number,
-    category: string,
-    key: string,
-    icon?: string
-  }>): Promise<any> {
+  sendChartData(chartDataArray: Array<Types.ChartDataItem>): Promise<any> {
     return this.transport.call('custom-chart-data', {
       data: chartDataArray
     });
@@ -402,7 +391,7 @@ class Plugin {
    * @throws {Error} If message or level is not provided, or if level/icon/timeout values are invalid.
    * @returns {Promise<any>} A promise that resolves with the server response.
    */
-  showFlexbarSnackbarMessage(serialNumber: string, msg: string, level: string, icon?: string, timeout: number = 2000, waitUser: boolean = false): Promise<any> {
+  showFlexbarSnackbarMessage(serialNumber: string, msg: string, level: Types.MessageLevel, icon?: Types.Icon, timeout: number = 2000, waitUser: boolean = false): Promise<any> {
     // Constants for validation
     const allowedLevels = ['info', 'warning', 'error', 'success'];
 
@@ -522,57 +511,53 @@ class Plugin {
    * @param {Array<Object>} shortcuts - The shortcuts to update.
    * @returns {Promise<any>} A promise that resolves with the server response.
    */
-  updateShortcuts(shortcuts: Array<{
-    shortcut: string,
-    action: string, // 'register' | 'unregister'
-  }>): Promise<any> {
+  updateShortcuts(shortcuts: Array<Types.ShortcutRegisterItem>): Promise<any> {
     return this.transport.call('update-shortcuts', { shortcuts });
   }
 
   /**
-   * @brief Set data for a specific key.
-   *
-   * Detailed description:
-   * This method sends a command to update the state or value of a specified key 
-   * based on the key type. It supports "multiState" and "slider" key types.
-   *
+   * @brief Set the state for a multistate key.
    * @param {string} serialNumber - The serial number of the device.
    * @param {Object} key - The key object received from the event `plugin.data` or `plugin.alive`.
-   * @param {Object} data - The data to set on the key. The format of `data` depends on the key type:
-   *   - For "multiState" keys: 
-   *   ```
-   *   {
-   *     state: <Number>,
-   *     message: <String> (optional)
-   *   }
-   *   ```
-   *   - For "slider" keys:
-   *   ```
-   *   {
-   *     value: <Number>
-   *   }
-   *   ```
+   * @param {number} state - The next state.
+   * @param {string?} message - Optional message to display on the bar.
    * @throws {Error} If the provided data is invalid for the given key type.
    * @returns {Promise<any>} A promise that resolves with the server response.
    */
-  set(serialNumber, key, data) {
-    // validate data
-    if (key.cfg?.keyType === 'multiState') {
-      // state key
-      if (!data.state && typeof data.state !== 'number') {
-        throw new Error('Invalid state value, should be { state: Number }');
-      }
+  setMultiState(serialNumber: string, key: Types.KeyData, state: number, message?: string) {
+    if (key.cfg.keyType !== 'multiState') {
+      throw new Error(`Invalid key type: ${key.cfg.keyType}`);
     }
-    else if (key.cfg?.keyType === 'slider') {
-      // slider key
-      if (!data.value && typeof data.value !== 'number') {
-        throw new Error('Invalid value, should be { value: Number }');
-      }
-    }
-    else {
-      throw new Error('Invalid key type');
-    }
+    return this.transport.call('set', {
+      serialNumber,
+      key,
+      data: { state, message }
+    });
+  }
 
+  /**
+   * @brief Set the value for a slider key.
+   * @param {string} serialNumber - The serial number of the device.
+   * @param {Object} key - The key object received from the event `plugin.data` or `plugin.alive`.
+   * @param {number} value - The slider value to set.
+   * @throws {Error} If the provided data is invalid for the given key type.
+   * @returns {Promise<any>} A promise that resolves with the server response.
+   */
+  setSlider(serialNumber: string, key: Types.KeyData, value: number) {
+    if (key.cfg.keyType !== 'slider') {
+      throw new Error(`Invalid key type: ${key.cfg.keyType}`);
+    }
+    return this.transport.call('set', {
+      serialNumber,
+      key,
+      data: { value }
+    });
+  }
+
+  /**
+   * @deprecated Use `setMultiState` or `setSlider` depending on key type
+   */
+  set(serialNumber: string, key: Types.KeyData, data: object) {
     return this.transport.call('set', {
       serialNumber,
       key,
@@ -594,7 +579,7 @@ class Plugin {
    * @param {number} [timeout=3000] - Duration in milliseconds before hiding the message
    * @return {Promise<any>} A promise that resolves with the response.
    */
-  showSnackbarMessage(color, message, timeout = 3000) {
+  showSnackbarMessage(color: string, message: string, timeout: number = 3000) {
     return this.transport.call('ui-operation', {
       type: 'showSnackbarMessage',
       data: {
@@ -631,7 +616,7 @@ class Plugin {
    * @returns {Promise<any>} A promise that resolves exactly as the Electron API returns
    * @throws {Error} Throws an error if the call fails
    */
-  electronAPI(api, ...args) {
+  electronAPI(api: string, ...args) {
     return this.transport.call(
       "api-call",
       {
@@ -657,7 +642,7 @@ class Plugin {
    * ```
    * @throws {Error} Throws an error if the call fails
    */
-  getAppInfo() {
+  getAppInfo(): Promise<Types.AppInfoResponse> {
     return this.transport.call(
       "api-call",
       {
@@ -724,31 +709,10 @@ class Plugin {
    * Retrieves an array of window objects in JSON format, each containing details
    * such as `platform`, `id`, `title`, `owner`, `bounds`, and `memoryUsage`.
    *
-   * @returns {Promise<Object[]>} A promise that resolves to an array of window objects, for example:
-   * ```
-   * [
-   *   {
-   *     "platform": "windows",
-   *     "id": 592082,
-   *     "title": "Flexbar Designer",
-   *     "owner": {
-   *       "processId": 11860,
-   *       "path": "Path to the executable",
-   *       "name": "Flexbar Designer"
-   *     },
-   *     "bounds": {
-   *       "x": 154,
-   *       "y": 0,
-   *       "width": 2252,
-   *       "height": 1528
-   *     },
-   *     "memoryUsage": 188665856
-   *   }
-   * ]
-   * ```
+   * @returns {Promise<Array<Types.DesktopWindow>>} A promise that resolves to an array of window objects.
    * @throws {Error} Throws an error if the call fails
    */
-  getOpenedWindows() {
+  getOpenedWindows(): Promise<Array<Types.DesktopWindow>> {
     return this.transport.call(
       "api-call",
       {
@@ -767,20 +731,10 @@ class Plugin {
    * `connecting`, `connected`, `serialNumber`, `platform`, `profileVersion`,
    * and `fwVersion`.
    *
-   * @returns {Promise<Object>} A promise that resolves to a JSON object, for example:
-   * ```
-   * {
-   *   "connecting": true | false,
-   *   "connected": true | false,
-   *   "serialNumber": "XXXXXX",
-   *   "platform": "win32 | darwin | linux",
-   *   "profileVersion": "vX.X.X",
-   *   "fwVersion": "vX.X.X"
-   * }
-   * ```
+   * @returns {Promise<Array<Types.DeviceStatusResponseItem>>} A promise that resolves to a JSON object.
    * @throws {Error} Throws an error if the call fails
    */
-  getDeviceStatus() {
+  getDeviceStatus(): Promise<Array<Types.DeviceStatusResponseItem>> {
     return this.transport.call(
       "api-call",
       {
@@ -795,27 +749,10 @@ class Plugin {
    * @brief Set device configuration
    * 
    * @param {string} serialNumber - The serial number of the device
-   * @param {Object} config Device configuration object that may contain:
-   * - sleepTime: number (0 or 30-5999) - Sleep timeout in seconds
-   * - brightness: number (0-100) - Screen brightness
-   * - screenFlip: boolean - Whether to flip the screen
-   * - vibrate: 'off' | 'partial' | 'full' - Vibration mode
-   * - autoSleep: boolean - Whether to sleep together with computer sleep state
-   * - deviceName: string (max 32 chars) - Device name
-   * - cdcMode: boolean - CDC mode switch
-   * - color: 'black' | 'silver' - Device color
+   * @param {Types.DeviceConfigInput} config Device configuration object. See comments in `DeviceConfigInput` for details.
    * @returns {Promise<any>} Promise that resolves with the result
    */
-  setDeviceConfig(serialNumber: string, config: {
-    sleepTime?: number,
-    brightness?: number,
-    screenFlip?: boolean,
-    vibrate?: 'off' | 'partial' | 'full',
-    autoSleep?: boolean,
-    deviceName?: string,
-    cdcMode?: boolean,
-    color?: 'space black' | 'silver'
-  }): Promise<any> {
+  setDeviceConfig(serialNumber: string, config: Types.DeviceConfigInput): Promise<any> {
     return this.transport.call('device-config', {
       serialNumber,
       config
