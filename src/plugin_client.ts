@@ -2,8 +2,8 @@
 // This file handles plugin-side WebSocket logic.
 
 import WebSocket from 'ws';
-import PluginCommand from './plugin_command';
-import defaultLogger from './logger';
+import PluginCommand from './plugin_command.js';
+import defaultLogger from './logger.js';
 const logger = defaultLogger.child({ scope: 'plugin' });
 const uiLogger = defaultLogger.child({ scope: 'UI' });
 import minimist from 'minimist';
