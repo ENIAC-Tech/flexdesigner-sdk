@@ -319,7 +319,7 @@ class Plugin {
    * The message and level are required parameters, while other parameters are optional.
    *
    * @param {string} serialNumber - The serial number of the device.
-   * @param {string} message - The message content to display (required).
+   * @param {string} msg - The message content to display (required).
    * @param {string} level - The message level (required). Possible values:
    * ```
    * "info" | "warning" | "error" | "success"
@@ -341,81 +341,76 @@ class Plugin {
    * @throws {Error} If message or level is not provided, or if level/icon/timeout values are invalid.
    * @returns {Promise<any>} A promise that resolves with the server response.
    */
-  showFlexbarSnackbarMessage(serialNumber: string, message: string, level: string, icon?: string, timeout: number = 2000, waitUser: boolean = false): Promise<any> {
+  showFlexbarSnackbarMessage(serialNumber: string, msg: string, level: string, icon?: string, timeout: number = 2000, waitUser: boolean = false): Promise<any> {
     // Constants for validation
-    const MSG_LEVEL = {
-      info: 0,
-      warning: 1,
-      error: 2,
-      success: 3,
-    };
+    const allowedLevels = ['info', 'warning', 'error', 'success'];
 
-    const ICON = {
-      audio: "\xEF\x80\x81",           /*61441, 0xF001*/
-      video: "\xEF\x80\x88",           /*61448, 0xF008*/
-      list: "\xEF\x80\x8B",            /*61451, 0xF00B*/
-      ok: "\xEF\x80\x8C",              /*61452, 0xF00C*/
-      close: "\xEF\x80\x8D",           /*61453, 0xF00D*/
-      power: "\xEF\x80\x91",           /*61457, 0xF011*/
-      settings: "\xEF\x80\x93",        /*61459, 0xF013*/
-      home: "\xEF\x80\x95",            /*61461, 0xF015*/
-      download: "\xEF\x80\x99",        /*61465, 0xF019*/
-      drive: "\xEF\x80\x9C",           /*61468, 0xF01C*/
-      refresh: "\xEF\x80\xA1",         /*61473, 0xF021*/
-      mute: "\xEF\x80\xA6",            /*61478, 0xF026*/
-      volume_mid: "\xEF\x80\xA7",      /*61479, 0xF027*/
-      volume_max: "\xEF\x80\xA8",      /*61480, 0xF028*/
-      image: "\xEF\x80\xBE",           /*61502, 0xF03E*/
-      tint: "\xEF\x81\x83",            /*61507, 0xF043*/
-      prev: "\xEF\x81\x88",            /*61512, 0xF048*/
-      play: "\xEF\x81\x8B",            /*61515, 0xF04B*/
-      pause: "\xEF\x81\x8C",           /*61516, 0xF04C*/
-      stop: "\xEF\x81\x8D",            /*61517, 0xF04D*/
-      next: "\xEF\x81\x91",            /*61521, 0xF051*/
-      eject: "\xEF\x81\x92",           /*61522, 0xF052*/
-      left: "\xEF\x81\x93",            /*61523, 0xF053*/
-      right: "\xEF\x81\x94",           /*61524, 0xF054*/
-      plus: "\xEF\x81\xA7",            /*61543, 0xF067*/
-      minus: "\xEF\x81\xA8",           /*61544, 0xF068*/
-      eye_open: "\xEF\x81\xAE",        /*61550, 0xF06E*/
-      eye_close: "\xEF\x81\xB0",       /*61552, 0xF070*/
-      warning: "\xEF\x81\xB1",         /*61553, 0xF071*/
-      shuffle: "\xEF\x81\xB4",         /*61556, 0xF074*/
-      up: "\xEF\x81\xB7",              /*61559, 0xF077*/
-      down: "\xEF\x81\xB8",            /*61560, 0xF078*/
-      loop: "\xEF\x81\xB9",            /*61561, 0xF079*/
-      directory: "\xEF\x81\xBB",       /*61563, 0xF07B*/
-      upload: "\xEF\x82\x93",          /*61587, 0xF093*/
-      call: "\xEF\x82\x95",            /*61589, 0xF095*/
-      cut: "\xEF\x83\x84",             /*61636, 0xF0C4*/
-      copy: "\xEF\x83\x85",            /*61637, 0xF0C5*/
-      save: "\xEF\x83\x87",            /*61639, 0xF0C7*/
-      bars: "\xEF\x83\x89",            /*61641, 0xF0C9*/
-      envelope: "\xEF\x83\xA0",        /*61664, 0xF0E0*/
-      charge: "\xEF\x83\xA7",          /*61671, 0xF0E7*/
-      paste: "\xEF\x83\xAA",           /*61674, 0xF0EA*/
-      bell: "\xEF\x83\xB3",            /*61683, 0xF0F3*/
-      keyboard: "\xEF\x84\x9C",        /*61724, 0xF11C*/
-      gps: "\xEF\x84\xA4",             /*61732, 0xF124*/
-      file: "\xEF\x85\x9B",            /*61787, 0xF158*/
-      wifi: "\xEF\x87\xAB",            /*61931, 0xF1EB*/
-      battery_full: "\xEF\x89\x80",    /*62016, 0xF240*/
-      battery_3: "\xEF\x89\x81",       /*62017, 0xF241*/
-      battery_2: "\xEF\x89\x82",       /*62018, 0xF242*/
-      battery_1: "\xEF\x89\x83",       /*62019, 0xF243*/
-      battery_empty: "\xEF\x89\x84",   /*62020, 0xF244*/
-      usb: "\xEF\x8a\x87",             /*62087, 0xF287*/
-      bluetooth: "\xEF\x8a\x93",       /*62099, 0xF293*/
-      trash: "\xEF\x8B\xAD",           /*62189, 0xF2ED*/
-      edit: "\xEF\x8C\x84",            /*62212, 0xF304*/
-      backspace: "\xEF\x95\x9A",       /*62810, 0xF55A*/
-      sd_card: "\xEF\x9F\x82",         /*63426, 0xF7C2*/
-      new_line: "\xEF\xA2\xA2",        /*63650, 0xF8A2*/
-      dummy: "\xEF\xA3\xBF"            /*Invalid symbol at (U+F8FF)*/
-    };
+    const allowedIcons = [
+      'audio',
+      'video',
+      'list',
+      'ok',
+      'close',
+      'power',
+      'settings',
+      'home',
+      'download',
+      'drive',
+      'refresh',
+      'mute',
+      'volume_mid',
+      'volume_max',
+      'image',
+      'tint',
+      'prev',
+      'play',
+      'pause',
+      'stop',
+      'next',
+      'eject',
+      'left',
+      'right',
+      'plus',
+      'minus',
+      'eye_open',
+      'eye_close',
+      'warning',
+      'shuffle',
+      'up',
+      'down',
+      'loop',
+      'directory',
+      'upload',
+      'call',
+      'cut',
+      'copy',
+      'save',
+      'bars',
+      'envelope',
+      'charge',
+      'paste',
+      'bell',
+      'keyboard',
+      'gps',
+      'file',
+      'wifi',
+      'battery_full',
+      'battery_3',
+      'battery_2',
+      'battery_1',
+      'battery_empty',
+      'usb',
+      'bluetooth',
+      'trash',
+      'edit',
+      'backspace',
+      'sd_card',
+      'new_line',
+      'dummy'
+    ]
 
     // Validate required parameters
-    if (!message || typeof message !== 'string' || message.length > 64) {
+    if (!msg || typeof msg !== 'string' || msg.length > 64) {
       throw new Error('Message is required and must be a string with length < 64');
     }
 
@@ -424,13 +419,13 @@ class Plugin {
     }
 
     // Validate level
-    if (!(level in MSG_LEVEL)) {
-      throw new Error(`Invalid level. Must be one of: ${Object.keys(MSG_LEVEL).join(', ')}`);
+    if (!allowedLevels.includes(level)) {
+      throw new Error(`Invalid level. Must be one of: ${allowedLevels.join(', ')}`);
     }
 
     // Validate icon if provided
-    if (icon !== undefined && !(icon in ICON)) {
-      throw new Error(`Invalid icon. Must be one of: ${Object.keys(ICON).join(', ')}`);
+    if (icon !== undefined && !allowedIcons.includes(icon)) {
+      throw new Error(`Invalid icon. Must be one of: ${allowedIcons.join(', ')}`);
     }
 
     // Validate timeout range
@@ -441,15 +436,15 @@ class Plugin {
     // Prepare the payload
     const payload: any = {
       serialNumber,
-      message,
-      level: MSG_LEVEL[level],
+      msg,
+      level,
       timeout,
       waitUser
     };
 
     // Add icon if provided
     if (icon !== undefined) {
-      payload.icon = ICON[icon];
+      payload.icon = icon;
     }
 
     return this._call('show-snackbar-message', payload);
