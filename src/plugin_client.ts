@@ -9,6 +9,197 @@ const uiLogger = defaultLogger.child({ scope: 'UI' });
 import minimist from 'minimist';
 
 /**
+ * @brief Dynamic key management class for handling dynamic key operations.
+ *
+ * Detailed description:
+ * This class provides methods to manage dynamic keys including adding, removing,
+ * moving, and drawing operations. It communicates with the server through the
+ * parent plugin instance using the "dynamic-plugin" command.
+ */
+class DynamicKey {
+  
+  private plugin: Plugin;
+
+  /**
+   * @brief Constructor for the DynamicKey class.
+   *
+   * @param {Plugin} plugin - The parent plugin instance.
+   */
+  constructor(plugin: Plugin) {
+    this.plugin = plugin;
+  }
+
+  /**
+   * @brief Clear all dynamic keys for a specific key.
+   *
+   * Detailed description:
+   * This method removes all dynamic keys associated with the specified key,
+   * effectively resetting the key to its initial state.
+   *
+   * @param {string} serialNumber - The serial number of the device.
+   * @param {Object} key - The key object received from the event `device.newPage` or `device.userData`.
+   * @returns {Promise<any>} A promise that resolves with the server response.
+   */
+  clear(serialNumber: string, key: Object): Promise<any> {
+    return this.plugin._call("dynamic-plugin", {
+      cmd: 'clear',
+      serialNumber,
+      key
+    });
+  }
+
+  /**
+   * @brief Add a new dynamic key at the specified index.
+   *
+   * Detailed description:
+   * This method adds a new dynamic key with the specified background and user data.
+   * The key will be inserted at the given index position.
+   *
+   * @param {string} serialNumber - The serial number of the device.
+   * @param {Object} key - The key object received from the event `device.newPage` or `device.userData`.
+   * @param {number} addToIndex - The index position where the new key should be added.
+   * @param {string} backgroundType - The type of background. Possible values:
+   * ```
+   * "base64" | "draw"
+   * ```
+   * @param {string} backgroundData - The background data (base64 image string for "base64" type), or the draw data for "draw" type.
+   * @param {number} width - The width of the dynamic key in pixels, from 60 to 1000.
+   * @param {Object} userData - Additional user data to associate with the key. This data will be sent to the plugin when the key is pressed.
+   * @returns {Promise<any>} A promise that resolves with the server response.
+   */
+  add(serialNumber: string, key: Object, addToIndex: number, backgroundType: string, backgroundData: string, width: number, userData: Object): Promise<any> {
+    return this.plugin._call("dynamic-plugin", {
+      cmd: 'add',
+      serialNumber,
+      type: backgroundType,
+      key: key,
+      index: addToIndex,
+      width: width,
+      backgroundData: backgroundData,
+      userData: userData
+    });
+  }
+
+  /**
+   * @brief Remove a dynamic key at the specified index.
+   *
+   * Detailed description:
+   * This method removes the dynamic key located at the specified index position.
+   *
+   * @param {string} serialNumber - The serial number of the device.
+   * @param {Object} key - The key object received from the event `device.newPage` or `device.userData`.
+   * @param {number} index - The index of the dynamic key to remove.
+   * @returns {Promise<any>} A promise that resolves with the server response.
+   */
+  remove(serialNumber: string, key: Object, index: number): Promise<any> {
+    return this.plugin._call("dynamic-plugin", {
+      cmd: 'remove',
+      serialNumber,
+      key,
+      index: index
+    });
+  }
+
+  /**
+   * @brief Set the width of the parent key container.
+   *
+   * Detailed description:
+   * This method updates the width property of the parent key, affecting how
+   * the dynamic keys are displayed within the container.
+   *
+   * @param {string} serialNumber - The serial number of the device.
+   * @param {Object} key - The key object received from the event `device.newPage` or `device.userData`.
+   * @param {number} width - The new width in pixels for the parent key container.
+   * @returns {Promise<any>} A promise that resolves with the server response.
+   */
+  setWidth(serialNumber: string, key: Object, width: number): Promise<any> {
+    return this.plugin._call("dynamic-plugin", {
+      cmd: 'set',
+      serialNumber,
+      key,
+      data: {
+        width: width
+      }
+    });
+  }
+
+  /**
+   * @brief Move a dynamic key from one position to another.
+   *
+   * Detailed description:
+   * This method moves a dynamic key from the source index to the destination index,
+   * reordering the keys within the container.
+   *
+   * @param {string} serialNumber - The serial number of the device.
+   * @param {Object} key - The key object received from the event `device.newPage` or `device.userData`.
+   * @param {number} srcIndex - The current index of the key to move.
+   * @param {number} dstIndex - The target index where the key should be moved.
+   * @returns {Promise<any>} A promise that resolves with the server response.
+   */
+  move(serialNumber: string, key: Object, srcIndex: number, dstIndex: number): Promise<any> {
+    return this.plugin._call("dynamic-plugin", {
+      cmd: 'move',
+      serialNumber,
+      key,
+      srcIndex: srcIndex,
+      dstIndex: dstIndex
+    });
+  }
+
+  /**
+   * @brief Draw or update the background of a specific dynamic key.
+   *
+   * Detailed description:
+   * This method updates the visual appearance of a dynamic key at the specified index
+   * by changing its background image or drawing content.
+   *
+   * @param {string} serialNumber - The serial number of the device.
+   * @param {Object} key - The key object received from the event `device.newPage` or `device.userData`.
+   * @param {number} index - The index of the dynamic key to update.
+   * @param {string} backgroundType - The type of background. Possible values:
+   * ```
+   * "base64" | "draw"
+   * ```
+   * @param {string} backgroundData - The background data (base64 image string for "base64" type).
+   * @param {number} width - The width of the dynamic key in pixels.
+   * @returns {Promise<any>} A promise that resolves with the server response.
+   */
+  draw(serialNumber: string, key: Object, index: number, backgroundType: string, backgroundData: string, width: number): Promise<any> {
+    return this.plugin._call("dynamic-plugin", {
+      cmd: 'draw',
+      serialNumber,
+      backgroundType: backgroundType,
+      key: key,
+      index: index,
+      width: width,
+      backgroundData: backgroundData
+    });
+  }
+
+  /**
+   * @brief Update user data for a specific dynamic key.
+   *
+   * Detailed description:
+   * This method updates the user data associated with a dynamic key at the specified index.
+   *
+   * @param {string} serialNumber - The serial number of the device.
+   * @param {Object} key - The key object received from the event `device.newPage` or `device.userData`.
+   * @param {number} index - The index of the dynamic key to update.
+   * @param {Object} userData - The new user data to associate with the key.
+   * @returns {Promise<any>} A promise that resolves with the server response.
+   */
+  update(serialNumber: string, key: Object, index: number, userData: Object): Promise<any> {
+    return this.plugin._call("dynamic-plugin", {
+      cmd: 'update',
+      serialNumber,
+      key,
+      index: index,
+      userData: userData
+    });
+  }
+}
+
+/**
  * @brief Plugin client class for managing WebSocket connections and interactions with the server.
  *
  * Detailed description:
@@ -25,6 +216,7 @@ class Plugin {
   uuid: string;
   directory: string;
   port: number;
+  dynamickey: DynamicKey;
 
   /**
    * @brief Constructor for the Plugin class.
@@ -37,6 +229,7 @@ class Plugin {
     this.uuid = '',
       this.directory = '',
       this.port = 0;
+    this.dynamickey = new DynamicKey(this);
   }
 
   /**
