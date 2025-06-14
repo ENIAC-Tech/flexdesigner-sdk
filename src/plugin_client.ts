@@ -37,7 +37,7 @@ class DynamicKey {
    * effectively resetting the key to its initial state.
    *
    * @param {string} serialNumber - The serial number of the device.
-   * @param {Object} key - The key object received from the event `device.newPage` or `device.userData`.
+   * @param {Object} key - The key object received from the event `plugin.data` or `plugin.alive`.
    * @returns {Promise<any>} A promise that resolves with the server response.
    */
   clear(serialNumber: string, key: Object): Promise<any> {
@@ -56,7 +56,7 @@ class DynamicKey {
    * The key will be inserted at the given index position.
    *
    * @param {string} serialNumber - The serial number of the device.
-   * @param {Object} key - The key object received from the event `device.newPage` or `device.userData`.
+   * @param {Object} key - The key object received from the event `plugin.data` or `plugin.alive`.
    * @param {number} addToIndex - The index position where the new key should be added.
    * @param {string} backgroundType - The type of background. Possible values:
    * ```
@@ -71,7 +71,7 @@ class DynamicKey {
     return this.plugin._call("dynamic-plugin", {
       cmd: 'add',
       serialNumber,
-      type: backgroundType,
+      backgroundType: backgroundType,
       key: key,
       index: addToIndex,
       width: width,
@@ -87,7 +87,7 @@ class DynamicKey {
    * This method removes the dynamic key located at the specified index position.
    *
    * @param {string} serialNumber - The serial number of the device.
-   * @param {Object} key - The key object received from the event `device.newPage` or `device.userData`.
+   * @param {Object} key - The key object received from the event `plugin.data` or `plugin.alive`.
    * @param {number} index - The index of the dynamic key to remove.
    * @returns {Promise<any>} A promise that resolves with the server response.
    */
@@ -108,7 +108,7 @@ class DynamicKey {
    * the dynamic keys are displayed within the container.
    *
    * @param {string} serialNumber - The serial number of the device.
-   * @param {Object} key - The key object received from the event `device.newPage` or `device.userData`.
+   * @param {Object} key - The key object received from the event `plugin.data` or `plugin.alive`.
    * @param {number} width - The new width in pixels for the parent key container.
    * @returns {Promise<any>} A promise that resolves with the server response.
    */
@@ -131,7 +131,7 @@ class DynamicKey {
    * reordering the keys within the container.
    *
    * @param {string} serialNumber - The serial number of the device.
-   * @param {Object} key - The key object received from the event `device.newPage` or `device.userData`.
+   * @param {Object} key - The key object received from the event `plugin.data` or `plugin.alive`.
    * @param {number} srcIndex - The current index of the key to move.
    * @param {number} dstIndex - The target index where the key should be moved.
    * @returns {Promise<any>} A promise that resolves with the server response.
@@ -154,7 +154,7 @@ class DynamicKey {
    * by changing its background image or drawing content.
    *
    * @param {string} serialNumber - The serial number of the device.
-   * @param {Object} key - The key object received from the event `device.newPage` or `device.userData`.
+   * @param {Object} key - The key object received from the event `plugin.data` or `plugin.alive`.
    * @param {number} index - The index of the dynamic key to update.
    * @param {string} backgroundType - The type of background. Possible values:
    * ```
@@ -183,7 +183,7 @@ class DynamicKey {
    * This method updates the user data associated with a dynamic key at the specified index.
    *
    * @param {string} serialNumber - The serial number of the device.
-   * @param {Object} key - The key object received from the event `device.newPage` or `device.userData`.
+   * @param {Object} key - The key object received from the event `plugin.data` or `plugin.alive`.
    * @param {number} index - The index of the dynamic key to update.
    * @param {Object} userData - The new user data to associate with the key.
    * @returns {Promise<any>} A promise that resolves with the server response.
@@ -195,6 +195,24 @@ class DynamicKey {
       key,
       index: index,
       userData: userData
+    });
+  }
+
+  /**
+   * @brief Refresh the dynamic key.
+   *
+   * Detailed description:
+   * This method refreshes the dynamic key.
+   *
+   * @param {string} serialNumber - The serial number of the device.
+   * @param {Object} key - The key object received from the event `plugin.data` or `plugin.alive`.
+   * @returns {Promise<any>} A promise that resolves with the server response.
+   */
+  refresh(serialNumber: string, key: Object): Promise<any> {
+    return this.plugin._call("dynamic-plugin", {
+      cmd: 'refresh',
+      serialNumber,
+      key
     });
   }
 }
@@ -447,7 +465,7 @@ class Plugin {
    * base64 format to be drawn on the specified key.
    *
    * @param {string} serialNumber - The serial number of the device.
-   * @param {Object} key - The key object received from the event `device.newPage` or `device.userData`.
+   * @param {Object} key - The key object received from the event `plugin.data` or `plugin.alive`.
    * @param {string} type - The type of drawing operation. Possible values:
    * ```
    * "draw" | "base64"
@@ -669,7 +687,7 @@ class Plugin {
    * based on the key type. It supports "multiState" and "slider" key types.
    *
    * @param {string} serialNumber - The serial number of the device.
-   * @param {Object} key - The key object received from the event `device.newPage` or `device.userData`.
+   * @param {Object} key - The key object received from the event `plugin.data` or `plugin.alive`.
    * @param {Object} data - The data to set on the key. The format of `data` depends on the key type:
    *   - For "multiState" keys: 
    *   ```
