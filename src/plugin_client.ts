@@ -54,6 +54,7 @@ class DynamicKey {
    * Detailed description:
    * This method adds a new dynamic key with the specified background and user data.
    * The key will be inserted at the given index position.
+   * The drawing functionality is similar to the plugin.draw method.
    *
    * @param {string} serialNumber - The serial number of the device.
    * @param {Object} key - The key object received from the event `plugin.data` or `plugin.alive`.
@@ -62,7 +63,9 @@ class DynamicKey {
    * ```
    * "base64" | "draw"
    * ```
-   * @param {string} backgroundData - The background data (base64 image string for "base64" type), or the draw data for "draw" type.
+   * When "base64" is selected, it will directly draw the specified image to the key.
+   * When "draw" is selected, it will render a background image based on the key object you specify.
+   * @param {string} backgroundData - The background data (base64 image string for "base64" type), or the key object for "draw" type.
    * @param {number} width - The width of the dynamic key in pixels, from 60 to 1000.
    * @param {Object} userData - Additional user data to associate with the key. This data will be sent to the plugin when the key is pressed.
    * @returns {Promise<any>} A promise that resolves with the server response.
@@ -160,7 +163,9 @@ class DynamicKey {
    * ```
    * "base64" | "draw"
    * ```
-   * @param {string} backgroundData - The background data (base64 image string for "base64" type).
+   * When "base64" is selected, it will directly draw the specified image to the key.
+   * When "draw" is selected, it will render a background image based on the key object you specify.
+   * @param {string} backgroundData - The background data (base64 image string for "base64" type). When "base64" is selected, backgroundData should be a base64 image string.
    * @param {number} width - The width of the dynamic key in pixels.
    * @returns {Promise<any>} A promise that resolves with the server response.
    */
@@ -202,7 +207,7 @@ class DynamicKey {
    * @brief Refresh the dynamic key.
    *
    * Detailed description:
-   * This method refreshes the dynamic key.
+   * This method refreshes the dynamic key. It is recommended to call this method with a 50ms delay after changing the width of a dynamic key to prevent display anomalies.
    *
    * @param {string} serialNumber - The serial number of the device.
    * @param {Object} key - The key object received from the event `plugin.data` or `plugin.alive`.
