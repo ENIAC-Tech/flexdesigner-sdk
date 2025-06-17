@@ -1,5 +1,5 @@
-import plugin from "./plugin_client";
-import logger from "./logger";
+import plugin from "./plugin_client.js";
+import logger from "./logger.js";
 import { fileURLToPath } from "url";
 
 const resourcesPath = fileURLToPath(new URL('../resources', import.meta.url));
