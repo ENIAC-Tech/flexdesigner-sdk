@@ -350,6 +350,30 @@ class Plugin {
   }
 
   /**
+   * @brief Draw a background image directly on the device screen. Only supports keys with type DirectDraw
+   *
+   * Detailed description:
+   * This method draws a background image directly on the device screen,
+   * replacing the current screen content. 
+   *
+   * @param {string} serialNumber - The serial number of the device.
+   * @param {Object} key - The key object received from the event `plugin.data` or `plugin.alive`.
+   * @param {string} backgroundData - The background data (base64 image string).
+   * @param {boolean} diffUpdate - If true, only update changed areas, otherwise always perform full screen update
+   * @param {Types.DirectDrawRegion} region - The region to update. If null, the entire screen will be updated. Height is fixed to 60, and y is fixed to 0.
+   * @returns {Promise<any>} A promise that resolves with the server response. 
+   */
+  directDraw(serialNumber: string, key: Types.KeyData, backgroundData: string, diffUpdate: boolean = false, offsetX: number = 0): Promise<any> {
+    return this.transport.call("direct-draw", {
+      serialNumber,
+      key,
+      data: backgroundData,
+      diffUpdate: diffUpdate,
+      offsetX: offsetX
+    });
+  }
+
+  /**
    * @brief Send chart data for performance monitoring.
    *
    * Detailed description:
