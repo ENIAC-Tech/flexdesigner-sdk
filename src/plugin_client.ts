@@ -391,6 +391,24 @@ class Plugin {
   }
 
   /**
+   * @brief Send a control command to the device.
+   * @param {string} serialNumber - The serial number of the device.
+   * @param {Types.ControlCommand} command - The command to send. One of the following:
+   * ```
+   * "sys.sleep": Put the device to sleep
+   * "sys.wake": Wake up the device
+   * "hapic.click": Trigger a click vibration
+   * ```
+   * @returns {Promise<any>} A promise that resolves with the server response.
+   */
+  sendControlCommand(serialNumber: string, command: Types.ControlCommand): Promise<any> {
+    return this.transport.call('control-command', {
+      serialNumber,
+      command
+    });
+  }
+
+  /**
    * @brief Show snackbar message on flexbar.
    *
    * Detailed description:
@@ -823,6 +841,8 @@ class Plugin {
       0
     );
   }
+
+
 }
 
 /**

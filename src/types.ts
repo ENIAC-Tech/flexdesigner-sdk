@@ -288,6 +288,8 @@ export type Icon =
   "battery_2" | "battery_1" | "battery_empty" | "usb" | "bluetooth" | "trash" |
   "edit" | "backspace" | "sd_card" | "new_line" | "dummy";
 
+export type ControlCommand = "sys.sleep" | "sys.wake" | "hapic.click";
+
 export interface ChartDataItem {
   /**
    * Display name of the metric.
