@@ -4,6 +4,18 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Git tag to check out and publish (e.g. v1.0.8)'
+        required: true
+        default: 'v1.0.8'
+
+# Trusted publishing (OIDC) — npm CLI ≥11.5.1, Node ≥22.14
+# Must match Trusted Publisher on npm: workflow filename publish.yml exactly.
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   build:
@@ -11,12 +23,21 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: >-
+            ${{ github.event_name == 'workflow_dispatch'
+            && format('refs/tags/{0}', github.event.inputs.tag)
+            || github.ref }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           registry-url: 'https://registry.npmjs.org'
+
+      # Trusted publishing requires npm 11.5.1+ (Node 22 default npm may be older)
+      - name: Upgrade npm for OIDC
+        run: npm install -g "npm@^11.6.0"
 
       - name: Install dependencies
         run: npm ci
@@ -24,8 +45,6 @@ jobs:
       - name: Build
         run: npm run build
 
-      # Token must be from an npm user with publish rights on @eniac/flexdesigner
+      # Do NOT set NPM_TOKEN — npm uses OIDC from GitHub Actions when trusted publisher is configured
       - name: Publish to npm
         run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
