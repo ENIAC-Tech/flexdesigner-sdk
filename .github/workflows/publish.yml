@@ -3,34 +3,38 @@ name: Publish to npm
 on:
   push:
     tags:
-      - 'v*.*.*' 
+      - 'v*.*.*'
+  # Re-run publish after fixing NPM_TOKEN without re-tagging (only if version not yet on npm).
+  workflow_dispatch:
 
 jobs:
-  build:
+  publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    # NPM auth must be available for both setup-node (writes ~/.npmrc) and npm publish.
+    # Putting the token only on the setup-node step is unreliable across versions;
+    # job-level env keeps publish authenticated.
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
+      - name: Setup Node.js and npm auth (scoped registry)
+        uses: actions/setup-node@v4
         with:
-          node-version: '18'
-
-      - name: Install dependencies
-        run: npm install
-      
-      - name: Build
-        run: npm run build
-
-      - name: Log in to npm
-        uses: actions/setup-node@v3
-        with:
+          node-version: '20'
           registry-url: https://registry.npmjs.org/
           scope: '@eniac'
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
 
       - name: Publish to npm
         run: npm publish --access public
