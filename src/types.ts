@@ -288,7 +288,12 @@ export type Icon =
   "battery_2" | "battery_1" | "battery_empty" | "usb" | "bluetooth" | "trash" |
   "edit" | "backspace" | "sd_card" | "new_line" | "dummy";
 
-export type ControlCommand = "sys.sleep" | "sys.wake" | "hapic.click";
+/** Device control topics. `hapic.click` is a legacy typo alias of `haptic.click` (same wire value). */
+export type ControlCommand =
+  | "sys.sleep"
+  | "sys.wake"
+  | "haptic.click"
+  | "hapic.click";
 
 export interface ChartDataItem {
   /**

@@ -397,7 +397,8 @@ class Plugin {
    * ```
    * "sys.sleep": Put the device to sleep
    * "sys.wake": Wake up the device
-   * "hapic.click": Trigger a click vibration
+   * "haptic.click": Trigger a click vibration
+   * "hapic.click": Same as haptic.click (legacy typo string; kept for backward compatibility)
    * ```
    * @returns {Promise<any>} A promise that resolves with the server response.
    */
